@@ -11,12 +11,17 @@ jobs:
       - name: Descargar codigo
         uses: actions/checkout@v4
 
+      - name: Asegurar herramientas del sistema
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip cmake
+
       - name: Descargar e instalar NDK directamente
         run: |
           echo "Descargando Android NDK..."
-          wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           echo "Descomprimiendo NDK..."
-          unzip -q android-ndk-r25c-linux.zip
+          unzip android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
       - name: Configurar CMake para Android
