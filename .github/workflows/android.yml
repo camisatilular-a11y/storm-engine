@@ -1,0 +1,27 @@
+name: Build Android APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Configurar Android NDK
+        uses: nttld/setup-ndk@v3
+        with:
+          ndk-version: r25c
+
+      - name: Configurar CMake para Android
+        run: |
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE=$ANDROID_SDK_ROOT/ndk/25.6.10693033/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-21
+
+      - name: Compilar ejecutable
+        run: cmake --build build
