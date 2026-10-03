@@ -11,11 +11,11 @@ jobs:
       - name: Descargar codigo
         uses: actions/checkout@v4
 
-      - name: Asegurar herramientas del sistema y Conan
+      - name: Asegurar herramientas del sistema y Conan 1.x
         run: |
           sudo apt-get update
           sudo apt-get install -y wget unzip cmake python3-pip
-          pip install conan
+          pip install "conan<2"
 
       - name: Descargar e instalar NDK directamente
         run: |
