@@ -25,8 +25,8 @@ jobs:
           unzip android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
-      - name: Quitar servidor remoto muerto de Conan
-        run: sed -i '/storm.jfrog.io/d' CMakeLists.txt
+      - name: Quitar dependencia de DirectX
+        run: sed -i '/directx/d' conanfile.py || true
 
       - name: Configurar CMake para Android
         run: |
