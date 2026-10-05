@@ -27,20 +27,24 @@ jobs:
 
       - name: Limpiar dependencias y remotos muertos
         run: |
-          # Comentar cualquier intento de añadir remotos en CMakeLists.txt para evitar el error de URL
-          sed -i 's/conan_add_remote/#conan_add_remote/g' CMakeLists.txt
-          
-          # Limpiar TODAS las dependencias del servidor storm en conanfile.py
-          cat << 'EOF' > fix_conan.py
+          cat << 'EOF' > fix_build.py
           import re
+          
+          # 1. Borrar el bloque multilínea completo de conan_add_remote en CMakeLists.txt
+          with open('CMakeLists.txt', 'r') as f:
+              cmake_data = f.read()
+          cmake_data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', cmake_data)
+          with open('CMakeLists.txt', 'w') as f:
+              f.write(cmake_data)
+              
+          # 2. Limpiar las dependencias huérfanas del servidor storm en conanfile.py
           with open('conanfile.py', 'r') as f:
-              data = f.read()
-          # Elimina cualquier texto como "directx/...@storm" o "fmod/...@storm"
-          data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', data)
+              conan_data = f.read()
+          conan_data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', conan_data)
           with open('conanfile.py', 'w') as f:
-              f.write(data)
+              f.write(conan_data)
           EOF
-          python3 fix_conan.py
+          python3 fix_build.py
 
       - name: Configurar CMake para Android
         run: |
