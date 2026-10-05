@@ -42,22 +42,27 @@ jobs:
         run: |
           cat << 'EOF' > fix_build.py
           import re
+          import os
           
-          # Limpiar CMakeLists.txt
-          with open('CMakeLists.txt', 'r') as f:
-              cmake_data = f.read()
-          cmake_data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', cmake_data)
-          cmake_data = re.sub(r'sdl2?:nas=(True|False|ON|OFF)', '', cmake_data, flags=re.IGNORECASE)
-          with open('CMakeLists.txt', 'w') as f:
-              f.write(cmake_data)
+          def clean_file(filepath):
+              if not os.path.exists(filepath): return
+              with open(filepath, 'r') as f:
+                  data = f.read()
               
-          # Limpiar conanfile.py
-          with open('conanfile.py', 'r') as f:
-              conan_data = f.read()
-          conan_data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', conan_data)
-          conan_data = re.sub(r'["\']sdl2?:nas["\']\s*:\s*(True|False),?\s*', '', conan_data, flags=re.IGNORECASE)
-          with open('conanfile.py', 'w') as f:
-              f.write(conan_data)
+              # 1. Limpiar remotos muertos
+              data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', data)
+              # 2. Limpiar dependencias huerfanas
+              data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', data)
+              # 3. Limpiar TODAS las referencias a 'nas' de forma agresiva
+              data = re.sub(r'["\']?sdl2?:nas["\']?\s*[:=]\s*["\']?(True|False|ON|OFF|1|0)["\']?\s*,?', '', data, flags=re.IGNORECASE)
+              
+              with open(filepath, 'w') as f:
+                  f.write(data)
+          
+          # Aplicar limpieza a todos los archivos posibles
+          clean_file('CMakeLists.txt')
+          clean_file('conanfile.py')
+          clean_file('conanfile.txt')
           EOF
           python3 fix_build.py
 
