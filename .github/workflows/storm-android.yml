@@ -38,18 +38,10 @@ jobs:
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
-      - name: Investigar y purgar opciones incompatibles de SDL
+      - name: Investigar y purgar URLs y opciones incompatibles
         run: |
-          echo "=== RESULTADOS DEL RASTREO DE 'nas' ==="
-          grep -Rni "nas" . || true
-          echo "======================================="
-          
           cat << 'EOF' > fix_build.py
-          import os, re
-          
-          # Palabras clave de opciones de PC que rompen la compilación en Android
-          bad_options = ['nas', 'alsa', 'pulse', 'jack', 'x11', 'wayland', 'xcursor', 'mir']
-          bad_patterns = [re.compile(r'\b' + opt + r'\b') for opt in bad_options]
+          import os
           
           for root, dirs, files in os.walk('.'):
               for file in files:
@@ -64,13 +56,19 @@ jobs:
                       for line in lines:
                           lower_line = line.lower()
                           
-                          # 1. Borrar linea entera si contiene 'sdl' y una opcion prohibida
-                          if 'sdl' in lower_line and any(p.search(lower_line) for p in bad_patterns):
-                              print(f"Borrando linea en {filepath}: {line.strip()}")
+                          # 1. Destruir referencias al repositorio privado de JFrog
+                          if 'jfrog.io' in lower_line:
+                              print(f"Eliminando URL privada en {filepath}: {line.strip()}")
                               changed = True
                               continue
                               
-                          # 2. Borrar configuraciones obsoletas de storm
+                          # 2. Destruir configuraciones de audio incompatibles con Android (nas, alsa, pulse)
+                          if 'sdl' in lower_line and any(opt in lower_line for opt in ['nas', 'alsa', 'pulse']):
+                              print(f"Borrando config SDL incompatible en {filepath}: {line.strip()}")
+                              changed = True
+                              continue
+                              
+                          # 3. Limpiar referencias a dependencias muertas conocidas
                           if 'conan_add_remote' in lower_line or '@storm/prebuilt' in lower_line:
                               changed = True
                               continue
