@@ -38,36 +38,50 @@ jobs:
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
-      - name: Limpiar dependencias y remotos muertos (Recursivo)
+      - name: Investigar y purgar opciones incompatibles de SDL
         run: |
+          echo "=== RESULTADOS DEL RASTREO DE 'nas' ==="
+          grep -Rni "nas" . || true
+          echo "======================================="
+          
           cat << 'EOF' > fix_build.py
-          import re, os
+          import os, re
           
-          # Expresiones regulares para borrar configuraciones de PC
-          regex_remoto = re.compile(r'conan_add_remote\s*\([^)]+\)')
-          regex_huerfanas = re.compile(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*')
-          regex_nas = re.compile(r'["\']?sdl2?:nas["\']?\s*[:=]\s*["\']?(True|False|ON|OFF|1|0)["\']?\s*,?', re.IGNORECASE)
+          # Palabras clave de opciones de PC que rompen la compilación en Android
+          bad_options = ['nas', 'alsa', 'pulse', 'jack', 'x11', 'wayland', 'xcursor', 'mir']
+          bad_patterns = [re.compile(r'\b' + opt + r'\b') for opt in bad_options]
           
-          # Recorrer TODAS las carpetas y archivos del proyecto
           for root, dirs, files in os.walk('.'):
               for file in files:
-                  if file.endswith(('.txt', '.py', '.cmake')):
-                      filepath = os.path.join(root, file)
-                      try:
-                          with open(filepath, 'r', encoding='utf-8') as f:
-                              data = f.read()
+                  if '.git' in root or file == 'fix_build.py': continue
+                  filepath = os.path.join(root, file)
+                  try:
+                      with open(filepath, 'r', encoding='utf-8') as f:
+                          lines = f.readlines()
+                      
+                      new_lines = []
+                      changed = False
+                      for line in lines:
+                          lower_line = line.lower()
                           
-                          new_data = regex_remoto.sub('', data)
-                          new_data = regex_huerfanas.sub('', new_data)
-                          new_data = regex_nas.sub('', new_data)
-                          
-                          # Si hubo cambios, sobrescribir el archivo
-                          if new_data != data:
-                              with open(filepath, 'w', encoding='utf-8') as f:
-                                  f.write(new_data)
-                              print(f"Limpieza aplicada en: {filepath}")
-                      except Exception as e:
-                          pass
+                          # 1. Borrar linea entera si contiene 'sdl' y una opcion prohibida
+                          if 'sdl' in lower_line and any(p.search(lower_line) for p in bad_patterns):
+                              print(f"Borrando linea en {filepath}: {line.strip()}")
+                              changed = True
+                              continue
+                              
+                          # 2. Borrar configuraciones obsoletas de storm
+                          if 'conan_add_remote' in lower_line or '@storm/prebuilt' in lower_line:
+                              changed = True
+                              continue
+                              
+                          new_lines.append(line)
+                      
+                      if changed:
+                          with open(filepath, 'w', encoding='utf-8') as f:
+                              f.writelines(new_lines)
+                  except Exception:
+                      pass
           EOF
           python3 fix_build.py
 
