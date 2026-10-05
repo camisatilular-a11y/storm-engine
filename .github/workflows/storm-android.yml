@@ -25,18 +25,18 @@ jobs:
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
-      - name: Quitar servidor remoto muerto de Conan
-        run: sed -i '/storm.jfrog.io/d' CMakeLists.txt
-
-      - name: Quitar dependencia de DirectX de forma segura
+      - name: Limpiar dependencias y remotos muertos
         run: |
+          # Comentar cualquier intento de añadir remotos en CMakeLists.txt para evitar el error de URL
+          sed -i 's/conan_add_remote/#conan_add_remote/g' CMakeLists.txt
+          
+          # Limpiar TODAS las dependencias del servidor storm en conanfile.py
           cat << 'EOF' > fix_conan.py
           import re
           with open('conanfile.py', 'r') as f:
               data = f.read()
-          # Elimina la dependencia sin romper los corchetes
-          data = re.sub(r',\s*["\']directx/9\.0@storm/prebuilt["\']', '', data)
-          data = re.sub(r'["\']directx/9\.0@storm/prebuilt["\']\s*,?\s*', '', data)
+          # Elimina cualquier texto como "directx/...@storm" o "fmod/...@storm"
+          data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', data)
           with open('conanfile.py', 'w') as f:
               f.write(data)
           EOF
