@@ -15,35 +15,39 @@ jobs:
       - name: Descargar codigo
         uses: actions/checkout@v4
 
-      - name: Asegurar herramientas del sistema y Conan 1.x
+      - name: Instalar dependencias limpias y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip build-essential g++ libegl-dev libegl1-mesa-dev
+          sudo apt-get install -y wget unzip cmake python3-pip
           pip install "conan<2"
-          conan profile new default --detect --force || true
-          conan profile update settings.compiler.libcxx=libstdc++11 default || true
 
       - name: Descargar e instalar NDK directamente
         run: |
           echo "Descargando Android NDK..."
           wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
-          echo "Descomprimiendo NDK..."
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
+
+      - name: Forzar perfil de Conan para Android
+        run: |
+          conan profile new default --detect --force
+          conan profile update settings.os=Android default
+          conan profile update settings.os.api_level=21 default
+          conan profile update settings.arch=armv7 default
+          conan profile update settings.compiler=clang default
+          conan profile update settings.compiler.libcxx=libc++ default
+          conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
       - name: Limpiar dependencias y remotos muertos
         run: |
           cat << 'EOF' > fix_build.py
           import re
-          
-          # 1. Borrar el bloque multilínea completo de conan_add_remote en CMakeLists.txt
           with open('CMakeLists.txt', 'r') as f:
               cmake_data = f.read()
           cmake_data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', cmake_data)
           with open('CMakeLists.txt', 'w') as f:
               f.write(cmake_data)
               
-          # 2. Limpiar las dependencias huérfanas del servidor storm en conanfile.py
           with open('conanfile.py', 'r') as f:
               conan_data = f.read()
           conan_data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', conan_data)
