@@ -14,7 +14,7 @@ jobs:
       - name: Asegurar herramientas del sistema y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip libegl-dev libegl1-mesa-dev
+          sudo apt-get install -y wget unzip cmake python3-pip libegl-dev libegl1-mesa-dev clang libc++-dev libc++abi-dev
           pip install "conan<2"
 
       - name: Descargar e instalar NDK directamente
