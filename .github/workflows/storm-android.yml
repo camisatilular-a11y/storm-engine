@@ -38,50 +38,35 @@ jobs:
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
-      - name: Investigar y purgar URLs y opciones incompatibles
+      - name: Parchear archivos de configuración para Android
         run: |
-          cat << 'EOF' > fix_build.py
-          import os
+          python3 -c '
+          # 1. Modificar conanfile.py para quitar dependencias muertas y la opción nas
+          with open("conanfile.py", "r", encoding="utf-8") as f:
+              content = f.read()
           
-          for root, dirs, files in os.walk('.'):
-              for file in files:
-                  if '.git' in root or file == 'fix_build.py': continue
-                  filepath = os.path.join(root, file)
-                  try:
-                      with open(filepath, 'r', encoding='utf-8') as f:
-                          lines = f.readlines()
-                      
-                      new_lines = []
-                      changed = False
-                      for line in lines:
-                          lower_line = line.lower()
-                          
-                          # 1. Destruir referencias al repositorio privado de JFrog
-                          if 'jfrog.io' in lower_line:
-                              print(f"Eliminando URL privada en {filepath}: {line.strip()}")
-                              changed = True
-                              continue
-                              
-                          # 2. Destruir configuraciones de audio incompatibles con Android (nas, alsa, pulse)
-                          if 'sdl' in lower_line and any(opt in lower_line for opt in ['nas', 'alsa', 'pulse']):
-                              print(f"Borrando config SDL incompatible en {filepath}: {line.strip()}")
-                              changed = True
-                              continue
-                              
-                          # 3. Limpiar referencias a dependencias muertas conocidas
-                          if 'conan_add_remote' in lower_line or '@storm/prebuilt' in lower_line:
-                              changed = True
-                              continue
-                              
-                          new_lines.append(line)
-                      
-                      if changed:
-                          with open(filepath, 'w', encoding='utf-8') as f:
-                              f.writelines(new_lines)
-                  except Exception:
-                      pass
-          EOF
-          python3 fix_build.py
+          # Remover líneas de storm.jfrog.io y directx/fmod/steamworks
+          content = content.replace("\"directx/9.0@storm/prebuilt\", \"fmod/2.02.05@storm/prebuilt\"", "")
+          content = content.replace("self.options[\"sdl\"].nas = False", "# self.options[\"sdl\"].nas = False")
+          content = content.replace("self.requires(\"steamworks/1.5.1@storm/prebuilt\")", "# self.requires(\"steamworks/1.5.1@storm/prebuilt\")")
+          
+          with open("conanfile.py", "w", encoding="utf-8") as f:
+              f.write(content)
+          
+          # 2. Modificar CMakeLists.txt para quitar el conan_add_remote de jfrog
+          with open("CMakeLists.txt", "r", encoding="utf-8") as f:
+              cmake_content = f.read()
+          
+          old_remote_block = """conan_add_remote (NAME storm
+    URL https://storm.jfrog.io/artifactory/api/conan/conan-remote
+    VERIFY_SSL True
+)"""
+          cmake_content = cmake_content.replace(old_remote_block, "")
+          
+          with open("CMakeLists.txt", "w", encoding="utf-8") as f:
+              f.write(cmake_content)
+          print("Parches aplicados con éxito a los archivos fuente.")
+          '
 
       - name: Configurar CMake para Android
         run: |
