@@ -4,6 +4,10 @@ on:
   push:
   workflow_dispatch:
 
+env:
+  ANDROID_NDK_HOME: /home/runner/ndk
+  NDK_HOME: /home/runner/ndk
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,7 +18,7 @@ jobs:
       - name: Asegurar herramientas del sistema y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip libegl-dev libegl1-mesa-dev build-essential g++
+          sudo apt-get install -y wget unzip cmake python3-pip build-essential g++ libegl-dev libegl1-mesa-dev
           pip install "conan<2"
           conan profile new default --detect --force || true
           conan profile update settings.compiler.libcxx=libstdc++11 default || true
