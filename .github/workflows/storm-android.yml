@@ -22,11 +22,20 @@ jobs:
           echo "Descargando Android NDK..."
           wget https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           echo "Descomprimiendo NDK..."
-          unzip android-ndk-r25c-linux.zip
+          unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
-      - name: Quitar dependencia de DirectX
-        run: sed -i '/directx/d' conanfile.py || true
+      - name: Limpiar DirectX de forma segura en conanfile.py
+        run: |
+          python3 -c '
+          with open("conanfile.py", "r") as f:
+              lines = f.readlines()
+          new_lines = [line for line in lines if "directx" not in line]
+          text = "".join(new_lines)
+          text = text.replace(",\n]", "\n]")
+          with open("conanfile.py", "w") as f:
+              f.write(text)
+          '
 
       - name: Configurar CMake para Android
         run: |
