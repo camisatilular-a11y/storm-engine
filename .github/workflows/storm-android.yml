@@ -38,31 +38,36 @@ jobs:
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
-      - name: Limpiar dependencias y remotos muertos
+      - name: Limpiar dependencias y remotos muertos (Recursivo)
         run: |
           cat << 'EOF' > fix_build.py
-          import re
-          import os
+          import re, os
           
-          def clean_file(filepath):
-              if not os.path.exists(filepath): return
-              with open(filepath, 'r') as f:
-                  data = f.read()
-              
-              # 1. Limpiar remotos muertos
-              data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', data)
-              # 2. Limpiar dependencias huerfanas
-              data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', data)
-              # 3. Limpiar TODAS las referencias a 'nas' de forma agresiva
-              data = re.sub(r'["\']?sdl2?:nas["\']?\s*[:=]\s*["\']?(True|False|ON|OFF|1|0)["\']?\s*,?', '', data, flags=re.IGNORECASE)
-              
-              with open(filepath, 'w') as f:
-                  f.write(data)
+          # Expresiones regulares para borrar configuraciones de PC
+          regex_remoto = re.compile(r'conan_add_remote\s*\([^)]+\)')
+          regex_huerfanas = re.compile(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*')
+          regex_nas = re.compile(r'["\']?sdl2?:nas["\']?\s*[:=]\s*["\']?(True|False|ON|OFF|1|0)["\']?\s*,?', re.IGNORECASE)
           
-          # Aplicar limpieza a todos los archivos posibles
-          clean_file('CMakeLists.txt')
-          clean_file('conanfile.py')
-          clean_file('conanfile.txt')
+          # Recorrer TODAS las carpetas y archivos del proyecto
+          for root, dirs, files in os.walk('.'):
+              for file in files:
+                  if file.endswith(('.txt', '.py', '.cmake')):
+                      filepath = os.path.join(root, file)
+                      try:
+                          with open(filepath, 'r', encoding='utf-8') as f:
+                              data = f.read()
+                          
+                          new_data = regex_remoto.sub('', data)
+                          new_data = regex_huerfanas.sub('', new_data)
+                          new_data = regex_nas.sub('', new_data)
+                          
+                          # Si hubo cambios, sobrescribir el archivo
+                          if new_data != data:
+                              with open(filepath, 'w', encoding='utf-8') as f:
+                                  f.write(new_data)
+                              print(f"Limpieza aplicada en: {filepath}")
+                      except Exception as e:
+                          pass
           EOF
           python3 fix_build.py
 
