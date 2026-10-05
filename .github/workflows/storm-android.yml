@@ -42,15 +42,20 @@ jobs:
         run: |
           cat << 'EOF' > fix_build.py
           import re
+          
+          # Limpiar CMakeLists.txt
           with open('CMakeLists.txt', 'r') as f:
               cmake_data = f.read()
           cmake_data = re.sub(r'conan_add_remote\s*\([^)]+\)', '', cmake_data)
+          cmake_data = re.sub(r'sdl2?:nas=(True|False|ON|OFF)', '', cmake_data, flags=re.IGNORECASE)
           with open('CMakeLists.txt', 'w') as f:
               f.write(cmake_data)
               
+          # Limpiar conanfile.py
           with open('conanfile.py', 'r') as f:
               conan_data = f.read()
           conan_data = re.sub(r'["\'][^"\']*@storm/prebuilt["\']\s*,?\s*', '', conan_data)
+          conan_data = re.sub(r'["\']sdl2?:nas["\']\s*:\s*(True|False),?\s*', '', conan_data, flags=re.IGNORECASE)
           with open('conanfile.py', 'w') as f:
               f.write(conan_data)
           EOF
