@@ -1,38 +1,35 @@
 name: Build Android APK
-
 on:
   push:
   workflow_dispatch:
-
 env:
   ANDROID_NDK_HOME: /home/runner/ndk
   NDK_HOME: /home/runner/ndk
   CMAKE_MAKE_PROGRAM: /usr/bin/ninja
   CONAN_CONNECT_TIMEOUT: "10"
   CONAN_READ_TIMEOUT: "10"
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
-
+        
       - name: Instalar dependencias limpias y Conan 1.x
         run: |
           sudo apt-get update
           sudo apt-get install -y wget curl unzip cmake python3-pip ninja-build build-essential
           pip install "conan<2"
-
+          
       - name: Descargar e instalar NDK directamente
         run: |
           wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
-
+          
       - name: Bloquear auto-configuracion erronea de conan.cmake
         run: sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
-
+        
       - name: Forzar perfil de Conan para Android
         run: |
           conan profile new default --detect --force
@@ -46,12 +43,16 @@ jobs:
           conan profile update conf.tools.android:ndk_path=$HOME/ndk default
           conan profile update conf.tools.cmake.cmaketoolchain:generator=Ninja default
           conan profile update env.CMAKE_MAKE_PROGRAM=/usr/bin/ninja default
-
+          
+      - name: Instalar dependencias con Conan
+        run: |
+          conan install . --build=missing -s os=Android -s arch=armv7
+          
       - name: Reemplazar servidor de GNU congelado por espejo Kernel.org
         run: |
           conan download libiconv/1.17@ --recipe-only || true
           find ~/.conan/data -name "conandata.yml" -exec sed -i 's|https://ftp.gnu.org/gnu/|https://mirrors.kernel.org/gnu/|g' {} + || true
-
+          
       - name: Configurar y compilar CMake para Android
         run: |
           cmake -B build -G Ninja \
@@ -62,9 +63,16 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja
           cmake --build build --config Release
-
+          
+      - name: Compilar archivo APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease
+          
       - name: Guardar resultado compilado
         uses: actions/upload-artifact@v4
         with:
           name: storm-engine-android
-          path: build/
+          path: |
+            build/
+            app/build/outputs/apk/release/*.apk
