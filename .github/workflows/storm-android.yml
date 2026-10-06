@@ -31,13 +31,11 @@ jobs:
 
       - name: Arreglar pthread en NDK y limpiar dependencias obsoletas
         run: |
-          # 1. Engañar al enlazador (linker) de Android para que pase la validacion de pthread en mimalloc
           SYSROOT=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
           mkdir -p $SYSROOT/usr/lib/arm-linux-androideabi/21
           echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.so
           echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.a
           
-          # 2. Bloquear error de cmake y reemplazar de forma segura la dependencia rota
           sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
           sed -i 's|"sentry-native/0.4.14"|"fmt/8.0.1"|g' conanfile.py
 
@@ -50,10 +48,12 @@ jobs:
           conan profile update settings.compiler=clang default
           conan profile update settings.compiler.version=14 default
           conan profile update settings.compiler.libcxx=c++_shared default
-          conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
           conan profile update conf.tools.android:ndk_path=$HOME/ndk default
           conan profile update conf.tools.cmake.cmaketoolchain:generator=Ninja default
           conan profile update env.CMAKE_MAKE_PROGRAM=/usr/bin/ninja default
+          conan profile update conf.tools.cmake.cmaketoolchain:system_name=Android default
+          conan profile update conf.tools.cmake.cmaketoolchain:system_version=21 default
+          conan profile update "conf.tools.cmake.cmaketoolchain:user_toolchain=['$HOME/ndk/build/cmake/android.toolchain.cmake']" default
 
       - name: Instalar dependencias con Conan
         run: |
