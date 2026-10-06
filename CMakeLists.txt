@@ -28,10 +28,7 @@ endif()
 
 ### Set up third-party dependencies
 set(ENV{CONAN_REVISIONS_ENABLED} 1)
-conan_add_remote(NAME storm
-    URL https://storm.jfrog.io/artifactory/api/conan/conan-remote
-    VERIFY_SSL True
-)
+
 normalize_booleans(STORM_ENABLE_CRASH_REPORTS STORM_ENABLE_STEAM STORM_USE_CONAN_SDL)
 conan_cmake_run(CONANFILE conanfile.py
     BASIC_SETUP CMAKE_TARGETS
@@ -47,7 +44,7 @@ conan_cmake_run(CONANFILE conanfile.py
 ### Define library ALIASes for use without CONAN_PKG:: prefix
 foreach (conan_target ${CONAN_TARGETS})
     string(REPLACE "CONAN_PKG::" "" unprefixed_target ${conan_target})
-	add_library(${unprefixed_target} ALIAS ${conan_target})
+    add_library(${unprefixed_target} ALIAS ${conan_target})
 endforeach()
 ###
 
