@@ -18,7 +18,7 @@ jobs:
       - name: Instalar dependencias limpias y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip
+          sudo apt-get install -y wget unzip cmake python3-pip make ninja-build build-essential
           pip install "conan<2"
 
       - name: Descargar e instalar NDK directamente
@@ -35,7 +35,7 @@ jobs:
           conan profile update settings.os.api_level=21 default
           conan profile update settings.arch=armv7 default
           conan profile update settings.compiler=clang default
-          conan profile update settings.compiler.libcxx=libc++ default
+          conan profile update settings.compiler.libcxx=c++_shared default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
           conan profile update conf.tools.android:ndk_path=$HOME/ndk default
 
@@ -45,6 +45,7 @@ jobs:
             -DCMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=armeabi-v7a \
             -DANDROID_PLATFORM=android-21 \
+            -DANDROID_STL=c++_shared \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Compilar motor
