@@ -37,6 +37,7 @@ jobs:
           conan profile update settings.compiler=clang default
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
+          conan profile update conf.tools.android:ndk_path=$HOME/ndk default
 
       - name: Configurar CMake para Android
         run: |
