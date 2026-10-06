@@ -29,15 +29,22 @@ jobs:
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
-      - name: Arreglar pthread en NDK y limpiar dependencias obsoletas
+      - name: Limpiar dependencias incompatibles de forma segura
         run: |
-          SYSROOT=$HOME/ndk/toolchains/llvm/prebuilt/linux-x86_64/sysroot
-          mkdir -p $SYSROOT/usr/lib/arm-linux-androideabi/21
-          echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.so
-          echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.a
-          
           sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
-          sed -i 's|"sentry-native/0.4.14"|"fmt/8.0.1"|g' conanfile.py
+          cat << 'EOF' > patch_conan.py
+          with open('conanfile.py', 'r') as f:
+              lines = f.readlines()
+          with open('conanfile.py', 'w') as f:
+              for line in lines:
+                  if 'mimalloc' in line or 'sentry-native' in line:
+                      # Mantiene el espaciado original exacto antes de insertar "pass"
+                      indent = len(line) - len(line.lstrip())
+                      f.write(' ' * indent + 'pass\n')
+                  else:
+                      f.write(line)
+          EOF
+          python3 patch_conan.py
 
       - name: Forzar perfil de Conan para Android
         run: |
