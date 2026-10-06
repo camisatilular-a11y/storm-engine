@@ -32,9 +32,9 @@ jobs:
       - name: Limpiar dependencias incompatibles de forma segura
         run: |
           sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
-          # Borrar las líneas completas para no generar errores de sintaxis en Python
-          sed -i '/mimalloc/d' conanfile.py
-          sed -i '/sentry-native/d' conanfile.py
+          # Reemplazar el texto exacto mantiene la estructura de Python intacta
+          sed -i 's|"mimalloc/2.0.3"|"fmt/8.0.1"|g' conanfile.py
+          sed -i 's|"sentry-native/0.4.14"|"fmt/8.0.1"|g' conanfile.py
 
       - name: Forzar perfil de Conan para Android
         run: |
