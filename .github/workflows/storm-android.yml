@@ -8,6 +8,8 @@ env:
   ANDROID_NDK_HOME: /home/runner/ndk
   NDK_HOME: /home/runner/ndk
   CMAKE_MAKE_PROGRAM: /usr/bin/ninja
+  CONAN_RETRY: "5"
+  CONAN_RETRY_WAIT: "5"
 
 jobs:
   build:
@@ -15,6 +17,11 @@ jobs:
     steps:
       - name: Descargar codigo
         uses: actions/checkout@v4
+
+      - name: Corregir red (desactivar IPv6 para FTP de GNU)
+        run: |
+          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
 
       - name: Instalar dependencias limpias y Conan 1.x
         run: |
