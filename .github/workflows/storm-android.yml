@@ -29,8 +29,10 @@ jobs:
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
 
-      - name: Bloquear auto-configuracion erronea de conan.cmake
-        run: sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
+      - name: Bloquear auto-configuracion erronea de conan.cmake y remover sentry
+        run: |
+          sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
+          sed -i '/sentry-native/d' conanfile.py
 
       - name: Forzar perfil de Conan para Android
         run: |
