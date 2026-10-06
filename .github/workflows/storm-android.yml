@@ -32,19 +32,9 @@ jobs:
       - name: Limpiar dependencias incompatibles de forma segura
         run: |
           sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
-          cat << 'EOF' > patch_conan.py
-          with open('conanfile.py', 'r') as f:
-              lines = f.readlines()
-          with open('conanfile.py', 'w') as f:
-              for line in lines:
-                  if 'mimalloc' in line or 'sentry-native' in line:
-                      # Mantiene el espaciado original exacto antes de insertar "pass"
-                      indent = len(line) - len(line.lstrip())
-                      f.write(' ' * indent + 'pass\n')
-                  else:
-                      f.write(line)
-          EOF
-          python3 patch_conan.py
+          # Borrar las líneas completas para no generar errores de sintaxis en Python
+          sed -i '/mimalloc/d' conanfile.py
+          sed -i '/sentry-native/d' conanfile.py
 
       - name: Forzar perfil de Conan para Android
         run: |
