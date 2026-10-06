@@ -1,38 +1,73 @@
-- name: Saneamiento total del motor para Android
+name: Build Android APK
+
+on:
+  push:
+  workflow_dispatch:
+
+env:
+  ANDROID_NDK_HOME: /home/runner/ndk
+  NDK_HOME: /home/runner/ndk
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar codigo
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias limpias y Conan 1.x
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget unzip cmake python3-pip
+          pip install "conan<2"
+
+      - name: Descargar e instalar NDK directamente
+        run: |
+          echo "Descargando Android NDK..."
+          wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
+          unzip -q android-ndk-r25c-linux.zip
+          mv android-ndk-r25c $HOME/ndk
+
+      - name: Forzar perfil de Conan para Android
+        run: |
+          conan profile new default --detect --force
+          conan profile update settings.os=Android default
+          conan profile update settings.os.api_level=21 default
+          conan profile update settings.arch=armv7 default
+          conan profile update settings.compiler=clang default
+          conan profile update settings.compiler.libcxx=libc++ default
+          conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
+
+      - name: Saneamiento total del motor para Android
         run: |
           cat << 'EOF' > patch.py
           import re
 
-          # 1. Reescribir de forma limpia la sección conflictiva de conanfile.py
           with open("conanfile.py", "r", encoding="utf-8") as f:
               content = f.read()
 
-          # Reemplazar por completo el bloque condicional problemático de requisitos por una versión segura para Android
           old_req_block = '''if self.settings.os == "Windows":
-    #conan-center
-    self.requires("7zip/19.00")
-else:
-    #conan-center
-    self.requires ("openssl/1.1.1n")#fix for error: 'sentry-crashpad/0.4.13' requires 'openssl/1.
-    self.options["sdl"].nas = False #fix for https://github.com/conan-io/conan-center-index/issu
-    self.options["libsndfile"].with_mpeg= False #fix for 0a12560440ac9f760670829a1cde44b787f587a'''
+              #conan-center
+              self.requires("7zip/19.00")
+          else:
+              #conan-center
+              self.requires ("openssl/1.1.1n")#fix for error: 'sentry-crashpad/0.4.13' requires 'openssl/1.
+              self.options["sdl"].nas = False #fix for https://github.com/conan-io/conan-center-index/issu
+              self.options["libsndfile"].with_mpeg= False #fix for 0a12560440ac9f760670829a1cde44b787f587a'''
 
           new_req_block = '''if self.settings.os == "Windows":
-    pass
-else:
-    self.requires("openssl/1.1.1n")
-    self.options["libsndfile"].with_mpeg = False'''
+              pass
+          else:
+              self.requires("openssl/1.1.1n")
+              self.options["libsndfile"].with_mpeg = False'''
 
           content = content.replace(old_req_block, new_req_block)
-
-          # Limpiar dependencias de storm/prebuilt
           content = content.replace('"directx/9.0@storm/prebuilt", "fmod/2.02.05@storm/prebuilt"', '')
           content = content.replace('self.requires("steamworks/1.5.1@storm/prebuilt")', '# self.requires("steamworks/1.5.1@storm/prebuilt")')
 
           with open("conanfile.py", "w", encoding="utf-8") as f:
               f.write(content)
 
-          # 2. Limpiar CMakeLists.txt de cualquier llamada remota externa
           with open("CMakeLists.txt", "r", encoding="utf-8") as f:
               cmake_content = f.read()
 
@@ -44,3 +79,14 @@ else:
           print("Saneamiento completado con éxito.")
           EOF
           python3 patch.py
+
+      - name: Configurar CMake para Android
+        run: |
+          cmake -B build \
+            -DCMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake \
+            -DANDROID_ABI=armeabi-v7a \
+            -DANDROID_PLATFORM=android-21 \
+            -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compilar ejecutable
+        run: cmake --build build
