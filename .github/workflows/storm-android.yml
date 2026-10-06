@@ -37,9 +37,9 @@ jobs:
           echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.so
           echo "INPUT(-lc)" > $SYSROOT/usr/lib/arm-linux-androideabi/21/libpthread.a
           
-          # 2. Bloquear error de cmake y reemplazar de forma segura la dependencia rota de sentry
+          # 2. Bloquear error de cmake y reemplazar de forma segura la dependencia rota
           sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
-          python3 -c "import re; open('conanfile.py', 'w').write(re.sub(r'sentry-native/[0-9.]+', 'fmt/8.0.1', open('conanfile.py').read()))"
+          sed -i 's|"sentry-native/0.4.14"|"fmt/8.0.1"|g' conanfile.py
 
       - name: Forzar perfil de Conan para Android
         run: |
