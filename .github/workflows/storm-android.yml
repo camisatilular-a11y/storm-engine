@@ -48,7 +48,7 @@ jobs:
 
       - name: Instalar dependencias con Conan
         run: |
-          conan install . --build=missing -s os=Android -s arch=armv7 -o output_directory=build -o watermark_file=build/watermark.h -o crash_reports=False
+          conan install . --build=missing -s os=Android -s arch=armv7 -o output_directory=build -o watermark_file=build/watermark.h -o crash_reports=False -o steam=False -o conan_sdl=False
 
       - name: Reemplazar servidor de GNU congelado por espejo Kernel.org
         run: |
