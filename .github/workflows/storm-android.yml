@@ -7,7 +7,7 @@ on:
 env:
   ANDROID_NDK_HOME: /home/runner/ndk
   NDK_HOME: /home/runner/ndk
-  CONAN_CMAKE_GENERATOR: Ninja
+  CMAKE_MAKE_PROGRAM: /usr/bin/ninja
 
 jobs:
   build:
@@ -19,7 +19,7 @@ jobs:
       - name: Instalar dependencias limpias y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip make ninja-build build-essential
+          sudo apt-get install -y wget unzip cmake python3-pip ninja-build build-essential
           pip install "conan<2"
 
       - name: Descargar e instalar NDK directamente
@@ -28,6 +28,9 @@ jobs:
           wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
+
+      - name: Bloquear auto-configuracion erronea de conan.cmake
+        run: sed -i 's/BUILD missing/BUILD missing PROFILE default/g' CMakeLists.txt
 
       - name: Forzar perfil de Conan para Android
         run: |
@@ -41,7 +44,7 @@ jobs:
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
           conan profile update conf.tools.android:ndk_path=$HOME/ndk default
           conan profile update conf.tools.cmake.cmaketoolchain:generator=Ninja default
-          conan profile update conf.tools.gnu:make_program=/usr/bin/ninja default
+          conan profile update env.CMAKE_MAKE_PROGRAM=/usr/bin/ninja default
 
       - name: Configurar CMake para Android
         run: |
@@ -50,7 +53,8 @@ jobs:
             -DANDROID_ABI=armeabi-v7a \
             -DANDROID_PLATFORM=android-21 \
             -DANDROID_STL=c++_shared \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja
 
       - name: Compilar motor
         run: cmake --build build --config Release
