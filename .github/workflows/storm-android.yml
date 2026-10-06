@@ -38,42 +38,6 @@ jobs:
           conan profile update settings.compiler.libcxx=libc++ default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
 
-      - name: Saneamiento total del motor para Android
-        run: |
-          cat << 'EOF' > patch.py
-          import re
-
-          # 1. Modificar conanfile.py línea por línea para evitar errores de sintaxis
-          with open("conanfile.py", "r", encoding="utf-8") as f:
-              lines = f.readlines()
-
-          new_lines = []
-          for line in lines:
-              # Comentar la opción problemática de SDL para Android
-              if 'self.options["sdl"].nas' in line:
-                  new_lines.append('    # ' + line.strip() + ' # Comentado para Android\n')
-              # Reemplazar dependencias binarias cerradas de Windows
-              elif '"directx/9.0@storm/prebuilt"' in line or '"fmod/2.02.05@storm/prebuilt"' in line:
-                  continue
-              else:
-                  new_lines.append(line)
-
-          with open("conanfile.py", "w", encoding="utf-8") as f:
-              f.writelines(new_lines)
-
-          # 2. Limpiar CMakeLists.txt de cualquier llamada remota externa
-          with open("CMakeLists.txt", "r", encoding="utf-8") as f:
-              cmake_content = f.read()
-
-          cmake_content = re.sub(r'conan_add_remote\s*\([^)]*\)', '', cmake_content, flags=re.DOTALL)
-
-          with open("CMakeLists.txt", "w", encoding="utf-8") as f:
-              f.write(cmake_content)
-
-          print("Saneamiento completado con éxito.")
-          EOF
-          python3 patch.py
-
       - name: Configurar CMake para Android
         run: |
           cmake -B build \
@@ -82,5 +46,11 @@ jobs:
             -DANDROID_PLATFORM=android-21 \
             -DCMAKE_BUILD_TYPE=Release
 
-      - name: Compilar ejecutable
-        run: cmake --build build
+      - name: Compilar motor
+        run: cmake --build build --config Release
+
+      - name: Guardar resultado compilado
+        uses: actions/upload-artifact@v4
+        with:
+          name: storm-engine-android
+          path: build/
