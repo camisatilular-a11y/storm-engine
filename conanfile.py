@@ -6,7 +6,6 @@ from distutils.dir_util import copy_tree
 class StormEngine(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
-    # build options provided by CMakeLists.txt that are used in conanfile.py
     options = {
         "output_directory": "ANY",
         "watermark_file": "ANY",
@@ -15,26 +14,22 @@ class StormEngine(ConanFile):
         "conan_sdl": [True, False]
     }
 
-    # dependencies used in deploy binaries
-    # conan-center
-    requires = ["zlib/1.2.13", "spdlog/1.9.2", "fast_float/3.4.0", "mimalloc/2.0.3", "sentry-native/0.6.5",
-    # storm.jfrog.io
-    "directx/9.0@storm/prebuilt", "fmod/2.02.05@storm/prebuilt"]
-    # aux dependencies (e.g. for tests)
+    # SE ELIMINARON directx y fmod
+    requires = ["zlib/1.2.13", "spdlog/1.9.2", "fast_float/3.4.0", "mimalloc/2.0.3", "sentry-native/0.6.5"]
+    
     build_requires = "catch2/2.13.7"
 
-    # optional dependencies
     def requirements(self):
         if self.settings.os == "Windows":
-            # conan-center
             self.requires("7zip/19.00")
         else:
-            # conan-center
-            self.requires("openssl/1.1.1n")#fix for error: 'sentry-crashpad/0.4.13' requires 'openssl/1.1.1n' while 'pulseaudio/14.2' requires 'openssl/1.1.1q'
-            self.options["sdl"].nas = False #fix for https://github.com/conan-io/conan-center-index/issues/16606 - error: nas/1.9.4: Invalid ID: Recipe cannot be built with clang
-            self.options["libsndfile"].with_mpeg= False #fix for 0a12560440ac9f760670829a1cde44b787f587ad/src/src/libmpg123/mpg123lib_intern.h:346: undefined reference to `__pow_finite'
-        if self.options.steam:
-            self.requires("steamworks/1.5.1@storm/prebuilt")
+            self.requires("openssl/1.1.1n")
+            # self.options["sdl"].nas = False # REMOVIDO PARA ANDROID
+            self.options["libsndfile"].with_mpeg = False 
+        
+        # if self.options.steam:
+        #     self.requires("steamworks/1.5.1@storm/prebuilt") # REMOVIDO PARA ANDROID
+        
         if self.options.conan_sdl:
             self.requires("sdl/2.0.18")
 
@@ -52,28 +47,16 @@ class StormEngine(ConanFile):
         self.__install_folder("/src/libs/shared_headers/include/shared", "/resource/shared")
 
         if self.settings.os == "Windows":
-            if self.settings.build_type == "Debug":
-                self.__install_lib("fmodL.dll")
-            else:
-                self.__install_lib("fmod.dll")
-
+            # SE ELIMINÓ fmod.dll y fmodL.dll
             self.__install_bin("crashpad_handler.exe")
             if self.options.crash_reports:
                 self.__install_bin("7za.exe")
-            if self.options.steam:
-                self.__install_lib("steam_api64.dll")
-
-            self.__install_bin("mimalloc*.dll") # mimalloc, mimalloc-redirect, mimalloc-debug, etc.
+            # SE ELIMINÓ steam_api64.dll
+            self.__install_bin("mimalloc*.dll") 
 
         else: # not Windows
-            if self.settings.build_type == "Debug":
-                self.__install_lib("libfmodL.so.13")
-            else:
-                self.__install_lib("libfmod.so.13")
-
+            # SE ELIMINÓ libfmod.so.13 y libfmodL.so.13
             self.__install_bin("crashpad_handler")
-            #if self.options.steam:
-            #    self.__install_lib("steam_api64.dll")#TODO: fix conan package and then lib name
 
             if self.settings.build_type == "Debug":
                 self.__install_lib("libmimalloc-debug.so.2.0")
@@ -82,8 +65,7 @@ class StormEngine(ConanFile):
                 self.__install_lib("libmimalloc.so.2.0")
                 self.__install_lib("libmimalloc.so")
 
-        self.__write_watermark();
-
+        self.__write_watermark()
 
     def __write_watermark(self):
         with open(str(self.options.watermark_file), 'w') as f:
