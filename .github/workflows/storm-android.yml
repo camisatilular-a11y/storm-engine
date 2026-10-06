@@ -7,6 +7,7 @@ on:
 env:
   ANDROID_NDK_HOME: /home/runner/ndk
   NDK_HOME: /home/runner/ndk
+  CONAN_CMAKE_GENERATOR: Ninja
 
 jobs:
   build:
@@ -35,13 +36,16 @@ jobs:
           conan profile update settings.os.api_level=21 default
           conan profile update settings.arch=armv7 default
           conan profile update settings.compiler=clang default
+          conan profile update settings.compiler.version=14 default
           conan profile update settings.compiler.libcxx=c++_shared default
           conan profile update env.CONAN_CMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake default
           conan profile update conf.tools.android:ndk_path=$HOME/ndk default
+          conan profile update conf.tools.cmake.cmaketoolchain:generator=Ninja default
+          conan profile update conf.tools.gnu:make_program=/usr/bin/ninja default
 
       - name: Configurar CMake para Android
         run: |
-          cmake -B build \
+          cmake -B build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake \
             -DANDROID_ABI=armeabi-v7a \
             -DANDROID_PLATFORM=android-21 \
