@@ -8,8 +8,8 @@ env:
   ANDROID_NDK_HOME: /home/runner/ndk
   NDK_HOME: /home/runner/ndk
   CMAKE_MAKE_PROGRAM: /usr/bin/ninja
-  CONAN_RETRY: "5"
-  CONAN_RETRY_WAIT: "5"
+  CONAN_CONNECT_TIMEOUT: "10"
+  CONAN_READ_TIMEOUT: "10"
 
 jobs:
   build:
@@ -18,20 +18,14 @@ jobs:
       - name: Descargar codigo
         uses: actions/checkout@v4
 
-      - name: Corregir red (desactivar IPv6 para FTP de GNU)
-        run: |
-          sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
-          sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
-
       - name: Instalar dependencias limpias y Conan 1.x
         run: |
           sudo apt-get update
-          sudo apt-get install -y wget unzip cmake python3-pip ninja-build build-essential
+          sudo apt-get install -y wget curl unzip cmake python3-pip ninja-build build-essential
           pip install "conan<2"
 
       - name: Descargar e instalar NDK directamente
         run: |
-          echo "Descargando Android NDK..."
           wget -q https://dl.google.com/android/repository/android-ndk-r25c-linux.zip
           unzip -q android-ndk-r25c-linux.zip
           mv android-ndk-r25c $HOME/ndk
@@ -53,7 +47,12 @@ jobs:
           conan profile update conf.tools.cmake.cmaketoolchain:generator=Ninja default
           conan profile update env.CMAKE_MAKE_PROGRAM=/usr/bin/ninja default
 
-      - name: Configurar CMake para Android
+      - name: Reemplazar servidor de GNU congelado por espejo Kernel.org
+        run: |
+          conan download libiconv/1.17@ --recipe-only || true
+          find ~/.conan/data -name "conandata.yml" -exec sed -i 's|https://ftp.gnu.org/gnu/|https://mirrors.kernel.org/gnu/|g' {} + || true
+
+      - name: Configurar y compilar CMake para Android
         run: |
           cmake -B build -G Ninja \
             -DCMAKE_TOOLCHAIN_FILE=$HOME/ndk/build/cmake/android.toolchain.cmake \
@@ -62,9 +61,7 @@ jobs:
             -DANDROID_STL=c++_shared \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_MAKE_PROGRAM=/usr/bin/ninja
-
-      - name: Compilar motor
-        run: cmake --build build --config Release
+          cmake --build build --config Release
 
       - name: Guardar resultado compilado
         uses: actions/upload-artifact@v4
